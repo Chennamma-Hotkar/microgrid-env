@@ -1,0 +1,11 @@
+Metadata-Version: 2.4
+Name: microgrid-env
+Version: 1.0.0
+Summary: AI Custodire Resilience Engine for Next-Gen Microgrids
+Requires-Python: >=3.10
+Requires-Dist: fastapi>=0.104.0
+Requires-Dist: uvicorn[standard]>=0.24.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: websockets>=12.0
+Requires-Dist: httpx>=0.25.0
+Requires-Dist: openenv-core>=0.1.0

@@ -1,0 +1,17 @@
+name: microgrid_env
+version: "1.0.0"
+description: "AI Custodire Resilience Engine for Next-Gen Microgrids — RL environment for microgrid power management"
+author: your-hf-username
+tasks:
+  - id: load_balance
+    difficulty: easy
+    max_steps: 20
+  - id: fault_recovery
+    difficulty: medium
+    max_steps: 30
+  - id: optimal_dispatch
+    difficulty: hard
+    max_steps: 40
+action_space: MicrogridAction
+observation_space: MicrogridObservation
+reward_range: [-1.0, 1.0]
