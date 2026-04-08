@@ -161,14 +161,22 @@ class MicrogridEnvironment:
 
         elif self.task == "fault_recovery":
             if self.fault_active:
-                reward = -0.4   # penalty while fault is unhandled
-            else:
+                # Escalating penalty — longer fault goes unhandled, worse it gets
+                fault_duration = self.step_count - self.fault_at_step
+                reward = -0.4 - (fault_duration * 0.02)
+                reward = max(reward, -0.8)  # cap at -0.8
+            elif self._fault_isolated:
+                # Just isolated this step — big bonus
                 balance_score = max(0.0, 1.0 - abs(net_balance) / 5.0)
-                # Bonus if just isolated the fault this step
-                isolation_bonus = 0.4 if self._fault_isolated else 0.0
-                reward = balance_score * 0.6 + isolation_bonus
-                self._fault_isolated = False   # only give bonus once
-            reward -= load_shed * 0.2
+                reward = balance_score * 0.5 + 0.5  # isolation bonus
+                self._fault_isolated = False
+            else:
+                # Fault resolved — reward for stability
+                balance_score = max(0.0, 1.0 - abs(net_balance) / 5.0)
+                v_dev = abs(self.voltage_pu - 1.0)
+                stability = max(0.0, 1.0 - v_dev * 4.0)
+                reward = balance_score * 0.5 + stability * 0.5
+            reward -= load_shed * 0.3
 
         elif self.task == "optimal_dispatch":
             # Penalize voltage and frequency deviations
