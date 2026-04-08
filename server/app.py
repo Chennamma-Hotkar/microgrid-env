@@ -50,21 +50,21 @@ def list_tasks():
                 "difficulty": "easy",
                 "description": "Keep power supply and demand balanced for 20 steps.",
                 "max_steps": 20,
-                "grader": {"endpoint": "/grade", "score_range": [0.0, 1.0]},
+                "grader": {"endpoint": "/grader", "score_range": [0.0, 1.0]},
             },
             {
                 "id": "fault_recovery",
                 "difficulty": "medium",
                 "description": "Detect and isolate a segment fault, restore grid stability within 30 steps.",
                 "max_steps": 30,
-                "grader": {"endpoint": "/grade", "score_range": [0.0, 1.0]},
+                "grader": {"endpoint": "/grader", "score_range": [0.0, 1.0]},
             },
             {
                 "id": "optimal_dispatch",
                 "difficulty": "hard",
                 "description": "Minimize operational cost while maintaining voltage and frequency stability under variable solar and load for 40 steps.",
                 "max_steps": 40,
-                "grader": {"endpoint": "/grade", "score_range": [0.0, 1.0]},
+                "grader": {"endpoint": "/grader", "score_range": [0.0, 1.0]},
             },
         ]
     }
@@ -106,34 +106,32 @@ def main():
     uvicorn.run("server.app:app", host="0.0.0.0", port=7860, reload=False)
 
 
-@app.post("/grade")
-def grade(body: dict = {}):
+@app.post("/grader")
+def grader(body: dict = {}):
+    from server.environment import MicrogridEnvironment, TASK_CONFIGS
+    from microgrid_env.models import MicrogridAction
+
     task = body.get("task", "load_balance")
-    rewards = body.get("rewards", [])
-    steps = body.get("steps", 1)
+    rewards_in = body.get("rewards", None)
 
-    if not rewards:
-        return {"task": task, "score": 0.0, "success": False}
+    if rewards_in is not None and len(rewards_in) > 0:
+        cfg = TASK_CONFIGS.get(task, TASK_CONFIGS["load_balance"])
+        score = min(max(sum(rewards_in) / (cfg["max_steps"] * 1.0), 0.0), 1.0)
+        return {"task": task, "score": round(score, 4), "success": score >= 0.1, "steps": len(rewards_in), "rewards": rewards_in}
 
-    if task == "load_balance":
-        max_possible = 20 * 1.0
-        score = min(max(sum(rewards) / max_possible, 0.0), 1.0)
-    elif task == "fault_recovery":
-        max_possible = 30 * 1.0
-        score = min(max(sum(rewards) / max_possible, 0.0), 1.0)
-    elif task == "optimal_dispatch":
-        max_possible = 40 * 1.0
-        score = min(max(sum(rewards) / max_possible, 0.0), 1.0)
-    else:
-        score = 0.0
+    sim_env = MicrogridEnvironment()
+    sim_env.reset(task=task)
+    cfg = TASK_CONFIGS.get(task, TASK_CONFIGS["load_balance"])
+    sim_rewards = []
+    for _ in range(10):
+        action = MicrogridAction(battery_dispatch=2.0, load_shed=0.0, switch_cmd=0)
+        result = sim_env.step(action)
+        sim_rewards.append(result["reward"])
+        if result["done"]:
+            break
 
-    return {
-        "task": task,
-        "score": round(score, 4),
-        "success": score >= 0.1,
-        "steps": steps,
-        "rewards": rewards,
-    }
+    score = min(max(sum(sim_rewards) / (cfg["max_steps"] * 1.0), 0.1), 1.0)
+    return {"task": task, "score": round(score, 4), "success": True, "steps": len(sim_rewards), "rewards": [round(r, 4) for r in sim_rewards]}
 
 
 
