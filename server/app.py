@@ -50,18 +50,21 @@ def list_tasks():
                 "difficulty": "easy",
                 "description": "Keep power supply and demand balanced for 20 steps.",
                 "max_steps": 20,
+                "grader": {"endpoint": "/grade", "score_range": [0.0, 1.0]},
             },
             {
                 "id": "fault_recovery",
                 "difficulty": "medium",
                 "description": "Detect and isolate a segment fault, restore grid stability within 30 steps.",
                 "max_steps": 30,
+                "grader": {"endpoint": "/grade", "score_range": [0.0, 1.0]},
             },
             {
                 "id": "optimal_dispatch",
                 "difficulty": "hard",
                 "description": "Minimize operational cost while maintaining voltage and frequency stability under variable solar and load for 40 steps.",
                 "max_steps": 40,
+                "grader": {"endpoint": "/grade", "score_range": [0.0, 1.0]},
             },
         ]
     }
@@ -101,5 +104,36 @@ async def websocket_endpoint(websocket: WebSocket):
 def main():
     import uvicorn
     uvicorn.run("server.app:app", host="0.0.0.0", port=7860, reload=False)
+
+
+@app.post("/grade")
+def grade(body: dict = {}):
+    task = body.get("task", "load_balance")
+    rewards = body.get("rewards", [])
+    steps = body.get("steps", 1)
+
+    if not rewards:
+        return {"task": task, "score": 0.0, "success": False}
+
+    if task == "load_balance":
+        max_possible = 20 * 1.0
+        score = min(max(sum(rewards) / max_possible, 0.0), 1.0)
+    elif task == "fault_recovery":
+        max_possible = 30 * 1.0
+        score = min(max(sum(rewards) / max_possible, 0.0), 1.0)
+    elif task == "optimal_dispatch":
+        max_possible = 40 * 1.0
+        score = min(max(sum(rewards) / max_possible, 0.0), 1.0)
+    else:
+        score = 0.0
+
+    return {
+        "task": task,
+        "score": round(score, 4),
+        "success": score >= 0.1,
+        "steps": steps,
+        "rewards": rewards,
+    }
+
 if __name__ == '__main__':
     main()
