@@ -148,8 +148,12 @@ async def run_task(task_name: str, client: OpenAI) -> None:
 
 async def main() -> None:
     client = OpenAI(base_url=API_BASE_URL, api_key=API_KEY)
-    task = os.getenv("MICROGRID_TASK", "load_balance")
-    await run_task(task, client)
+    
+    # Run all 3 tasks sequentially
+    tasks_to_run = ["load_balance", "fault_recovery", "optimal_dispatch"]
+    
+    for task in tasks_to_run:
+        await run_task(task, client)
 
 
 if __name__ == "__main__":
