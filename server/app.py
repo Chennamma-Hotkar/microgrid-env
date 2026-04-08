@@ -111,7 +111,7 @@ def grader(body: dict = {}):
     from server.environment import MicrogridEnvironment, TASK_CONFIGS
     from microgrid_env.models import MicrogridAction
 
-    task = body.get("task", "load_balance")
+    task = body.get("task") or body.get("task_id") or "load_balance"
     rewards_in = body.get("rewards", None)
 
     if rewards_in is not None and len(rewards_in) > 0:
