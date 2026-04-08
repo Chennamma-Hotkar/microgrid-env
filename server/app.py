@@ -1,5 +1,5 @@
 import json
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse
 from server.environment import MicrogridEnvironment
 from microgrid_env.models import MicrogridAction
@@ -133,6 +133,41 @@ def grade(body: dict = {}):
         "success": score >= 0.1,
         "steps": steps,
         "rewards": rewards,
+    }
+
+
+
+@app.get("/metadata")
+def metadata():
+    return {
+        "name": "microgrid_env",
+        "description": "AI Custodire Resilience Engine for Next-Gen Microgrids",
+        "version": "1.0.0",
+        "tasks": ["load_balance", "fault_recovery", "optimal_dispatch"],
+    }
+
+
+@app.get("/schema")
+def schema():
+    from microgrid_env.models import MicrogridAction, MicrogridObservation
+    return {
+        "action": MicrogridAction.model_json_schema(),
+        "observation": MicrogridObservation.model_json_schema(),
+        "state": MicrogridObservation.model_json_schema(),
+    }
+
+
+@app.post("/mcp")
+async def mcp(request: Request):
+    from fastapi import Request
+    body = await request.json()
+    return {
+        "jsonrpc": "2.0",
+        "id": body.get("id", 1),
+        "result": {
+            "name": "microgrid_env",
+            "description": "AI Custodire Resilience Engine for Next-Gen Microgrids",
+        }
     }
 
 if __name__ == '__main__':
